@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SONIC // Minimalist Audio Visualizer</title>
+  
+  <!-- Premium Editorial Fonts (Geist, Geist Mono, Instrument Serif) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Geist:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="theme-reference">
+  <!-- Fullscreen Ambient Visualizer Canvas -->
+  <canvas id="visualizerCanvas"></canvas>
+
+  <!-- Top Editorial Header & Navigation (Auto-hiding HUD) -->
+  <header class="hud-header" id="hudHeader">
+    <div class="brand-group">
+      <div class="brand-mark">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="4" y1="12" x2="4" y2="12.01"></line>
+          <line x1="8" y1="8" x2="8" y2="16"></line>
+          <line x1="12" y1="4" x2="12" y2="20"></line>
+          <line x1="16" y1="7" x2="16" y2="17"></line>
+          <line x1="20" y1="10" x2="20" y2="14"></line>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <span class="brand-title">SONIC</span>
+        <span class="brand-sub">AUDIO SPECTROGRAM</span>
+      </div>
+      <div class="status-badge status-idle" id="statusBadge">
+        <span class="status-dot"></span>
+        <span class="status-label" id="statusLabel">STANDBY</span>
+      </div>
+    </div>
+
+    <!-- Main Audio Source Controls -->
+    <div class="source-toolbar">
+      <!-- Direct PC Audio Loopback (Spotify, YouTube, Games, Earphones) -->
+      <button class="btn btn-primary" id="btnCaptureLoopback" title="Capture any audio playing on your PC (Earphones, Speakers, Headphones)">
+        <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+        </svg>
+        <span>Connect PC Audio</span>
+      </button>
+
+      <!-- Local File Upload Button -->
+      <button class="btn btn-secondary" id="btnUploadFile" title="Load an audio file from your computer">
+        <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="17 8 12 3 7 8"></polyline>
+          <line x1="12" y1="3" x2="12" y2="15"></line>
+        </svg>
+        <span>Open File</span>
+      </button>
+      <input type="file" id="fileInput" accept="audio/*" style="display: none;">
+
+      <!-- Built-in Synth Demo Track -->
+      <button class="btn btn-secondary" id="btnDemoTrack" title="Play built-in ambient synth rhythm">
+        <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="5 3 19 12 5 21 5 3"></polygon>
+        </svg>
+        <span>Demo Synth</span>
+      </button>
+    </div>
+      <button class="btn btn-secondary" id="btnDemoTrack" title="Play built-in ambient synth rhythm">
+        <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="5 3 19 12 5 21 5 3"></polygon>
+        </svg>
+        <span>Demo Synth</span>
+      </button>
+    </div>
+
+    <!-- Utility Controls -->
+    <div class="utility-toolbar">
+      <button class="btn btn-ghost" id="btnHowTo" title="How to capture PC audio">
+        <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <span class="btn-label-desktop">Guide</span>
+      </button>
+
+      <button class="btn btn-ghost" id="btnSettingsToggle" title="Visualizer Settings">
+        <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        <span class="btn-label-desktop">Tuning</span>
+      </button>
+
+      <button class="btn btn-ghost" id="btnFullscreen" title="Toggle Fullscreen Mode">
+        <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="15 3 21 3 21 9"></polyline>
+          <polyline points="9 21 3 21 3 15"></polyline>
+          <line x1="21" y1="3" x2="14" y2="10"></line>
+          <line x1="3" y1="21" x2="10" y2="14"></line>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Empty State Onboarding Callout (Fades when audio starts) -->
+  <div class="empty-state-overlay" id="emptyStateOverlay">
+    <div class="empty-state-card">
+      <div class="empty-badge">PC AUDIO LOOPBACK</div>
+      <h1 class="empty-title">Turn any music playing on your PC into visual art.</h1>
+      <p class="empty-desc">
+        Visualizer captures real-time <span class="highlight-text">PC Audio Loopback</span> across any earphones, speakers, or headphones. Microphone input is completely excluded.
+      </p>
+      <div class="empty-actions">
+        <button class="btn btn-primary btn-large" id="btnEmptyLoopback">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          </svg>
+          <span>Connect PC Audio Loopback</span>
+        </button>
+        <button class="btn btn-secondary btn-large" id="btnEmptyDemo">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          <span>Play Demo Beat</span>
+        </button>
+      </div>
+      <div class="empty-meta">
+        <span class="meta-item"><kbd>Space</kbd> Play/Pause</span>
+        <span class="meta-item"><kbd>F</kbd> Fullscreen</span>
+        <span class="meta-item"><kbd>C</kbd> Connect Audio</span>
+        <span class="meta-item"><kbd>T</kbd> Theme</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Media Player HUD (Visible when File or Demo is active) -->
+  <footer class="player-hud" id="playerHud">
+    <div class="player-hud-inner">
+      <div class="track-info">
+        <div class="track-source-pill" id="trackSourcePill">DEMO</div>
+        <div class="track-meta">
+          <div class="track-name" id="trackName">Ambient Lo-Fi Groove</div>
+          <div class="track-sub" id="trackSub">Procedural Multi-Oscillator Beat</div>
+        </div>
+      </div>
+
+      <div class="player-controls">
+        <button class="player-btn" id="btnPlayPause" title="Play / Pause">
+          <svg id="iconPlay" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          <svg id="iconPause" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+            <rect x="6" y="4" width="4" height="16"></rect>
+            <rect x="14" y="4" width="4" height="16"></rect>
+          </svg>
+        </button>
+
+        <div class="scrubber-group">
+          <span class="time-label" id="currentTime">00:00</span>
+          <div class="scrubber-bar" id="scrubberBar">
+            <div class="scrubber-progress" id="scrubberProgress" style="width: 0%;"></div>
+          </div>
+          <span class="time-label" id="durationTime">--:--</span>
+        </div>
+
+        <button class="player-btn" id="btnStop" title="Stop Audio">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+          </svg>
+        </button>
+      </div>
+
+      <div class="volume-group">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+        </svg>
+        <input type="range" class="minimal-slider volume-slider" id="volumeSlider" min="0" max="1" step="0.01" value="0.8">
+      </div>
+    </div>
+  </footer>
+
+  <!-- Settings Drawer / Tuning Panel -->
+  <aside class="settings-drawer" id="settingsDrawer">
+    <div class="drawer-header">
+      <div class="drawer-title-group">
+        <h2 class="drawer-title">Spectrogram Tuning</h2>
+        <span class="drawer-subtitle">Aesthetic & Physics Controls</span>
+      </div>
+      <button class="drawer-close" id="btnSettingsClose" title="Close Panel">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+
+    <div class="drawer-body">
+      <!-- Section: Visual Form -->
+      <div class="setting-section">
+        <label class="section-label">VISUAL FORM</label>
+        
+        <div class="control-row">
+          <span class="control-name">Visualizer Mode</span>
+          <select class="minimal-select" id="settingMode">
+            <option value="symmetrical" selected>Symmetrical Mirror (Reference Image)</option>
+            <option value="waveform">Organic Waveform Mirror</option>
+            <option value="single-up">Unilateral (Upward Bars)</option>
+            <option value="dual-band">Split Stereo / Dual Band</option>
+          </select>
+        </div>
+
+        <div class="control-row">
+          <div class="control-label-wrap">
+            <span class="control-name">Bar Count</span>
+            <span class="control-val" id="valBarCount">72</span>
+          </div>
+          <input type="range" class="minimal-slider" id="settingBarCount" min="24" max="140" step="4" value="72">
+        </div>
+
+        <div class="control-row">
+          <div class="control-label-wrap">
+            <span class="control-name">Bar Spacing Ratio</span>
+            <span class="control-val" id="valBarSpacing">0.45</span>
+          </div>
+          <input type="range" class="minimal-slider" id="settingBarSpacing" min="0.15" max="0.75" step="0.05" value="0.45">
+        </div>
+
+        <div class="control-row">
+          <span class="control-name">Bar Cap Style</span>
+          <div class="pill-group" id="groupCapStyle">
+            <button class="pill-btn active" data-value="round">Round</button>
+            <button class="pill-btn" data-value="flat">Crisp Flat</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Audio Dynamics & Physics -->
+      <div class="setting-section">
+        <label class="section-label">AUDIO DYNAMICS & PHYSICS</label>
+
+        <div class="control-row">
+          <div class="control-label-wrap">
+            <span class="control-name">Sensitivity / Gain</span>
+            <span class="control-val" id="valGain">1.4x</span>
+          </div>
+          <input type="range" class="minimal-slider" id="settingGain" min="0.4" max="3.0" step="0.1" value="1.4">
+        </div>
+
+        <div class="control-row">
+          <div class="control-label-wrap">
+            <span class="control-name">Smoothing / Fluidity</span>
+            <span class="control-val" id="valSmoothing">0.82</span>
+          </div>
+          <input type="range" class="minimal-slider" id="settingSmoothing" min="0.40" max="0.95" step="0.02" value="0.82">
+        </div>
+
+        <div class="control-row">
+          <div class="control-label-wrap">
+            <span class="control-name">Transient Boost</span>
+            <span class="control-val" id="valTransient">Medium</span>
+          </div>
+          <input type="range" class="minimal-slider" id="settingTransient" min="1" max="3" step="1" value="2">
+        </div>
+
+        <div class="control-row">
+          <div class="control-label-wrap">
+            <span class="control-name">Minimum Baseline Height</span>
+            <span class="control-val" id="valMinHeight">6px</span>
+          </div>
+          <input type="range" class="minimal-slider" id="settingMinHeight" min="2" max="16" step="1" value="6">
+        </div>
+      </div>
+
+      <!-- Section: Color Palettes (Minimalist & Reference) -->
+      <div class="setting-section">
+        <label class="section-label">COLOR PALETTE</label>
+        <div class="theme-grid">
+          <!-- 1. Reference Green (Image match) -->
+          <button class="theme-card active" data-theme="theme-reference">
+            <div class="theme-swatch swatch-reference"></div>
+            <span class="theme-label">Reference Green</span>
+          </button>
+
+          <!-- 2. Minimalist Warm Dark -->
+          <button class="theme-card" data-theme="theme-monochrome-dark">
+            <div class="theme-swatch swatch-mono-dark"></div>
+            <span class="theme-label">Warm Charcoal</span>
+          </button>
+
+          <!-- 3. Editorial Bone / Light -->
+          <button class="theme-card" data-theme="theme-editorial-bone">
+            <div class="theme-swatch swatch-bone"></div>
+            <span class="theme-label">Editorial Bone</span>
+          </button>
+
+          <!-- 4. Deep Obsidian -->
+          <button class="theme-card" data-theme="theme-obsidian">
+            <div class="theme-swatch swatch-obsidian"></div>
+            <span class="theme-label">Obsidian Blue</span>
+          </button>
+
+          <!-- 5. Studio Earth -->
+          <button class="theme-card" data-theme="theme-earth">
+            <div class="theme-swatch swatch-earth"></div>
+            <span class="theme-label">Smoked Clay</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Section: Behavior -->
+      <div class="setting-section">
+        <label class="section-label">DISPLAY PREFERENCES</label>
+        
+        <label class="toggle-row">
+          <span class="control-name">Auto-hide controls during playback</span>
+          <input type="checkbox" id="settingAutoHide" checked>
+        </label>
+
+        <label class="toggle-row">
+          <span class="control-name">Render peak accent caps</span>
+          <input type="checkbox" id="settingShowPeaks" checked>
+        </label>
+
+        <label class="toggle-row">
+          <span class="control-name">Mirror bass in center (Symmetrical balance)</span>
+          <input type="checkbox" id="settingCenterBass" checked>
+        </label>
+      </div>
+
+      <div class="drawer-footer">
+        <button class="btn btn-secondary btn-full" id="btnResetSettings">Reset to Reference Defaults</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- How-To Modal (Explains PC audio capture in Windows/Chrome/Edge) -->
+  <div class="modal-backdrop" id="howToModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <span class="modal-kicker">STEP-BY-STEP GUIDE</span>
+          <h2 class="modal-title">How to Capture PC Audio</h2>
+        </div>
+        <button class="modal-close" id="btnModalClose">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="guide-step">
+          <div class="step-num">01</div>
+          <div class="step-content">
+            <h3 class="step-heading">Pure PC Audio Loopback</h3>
+            <p class="step-p">
+              The visualizer captures whatever music or sound is playing on your PC (Spotify, YouTube, games, media players). Microphone inputs are 100% blocked and excluded.
+            </p>
+          </div>
+        </div>
+
+        <div class="guide-step">
+          <div class="step-num">02</div>
+          <div class="step-content">
+            <h3 class="step-heading">Share System Audio</h3>
+            <p class="step-p">
+              Click <strong>"Connect PC Audio"</strong>. In the browser screen-sharing dialog, select <strong>"Entire Screen"</strong> and make sure the <strong>"Also share system audio"</strong> checkbox is checked.
+            </p>
+          </div>
+        </div>
+
+        <div class="guide-step">
+          <div class="step-num">03</div>
+          <div class="step-content">
+            <h3 class="step-heading">Zero Device Menus, Minimalist HUD</h3>
+            <p class="step-p">
+              Press <kbd>F</kbd> for fullscreen. Controls automatically hide after 3 seconds so you can enjoy pure audio visual art without distractions.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-primary" id="btnGuideGotIt">Got It, Let's Visualise</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Audio Permission Callout Modal (Shown if user forgot to check the audio box) -->
+  <div class="modal-backdrop" id="audioNoticeModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <span class="modal-kicker">ONE-CLICK SETUP REQUIRED</span>
+          <h2 class="modal-title">Check "Also share system audio"</h2>
+        </div>
+        <button class="modal-close" id="btnNoticeClose">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <p class="step-p">
+          When the browser asks what screen to share, Chrome/Edge has an un-checked box at the <strong>bottom-left</strong>:
+        </p>
+
+        <!-- Visual diagram replicating the Chrome prompt -->
+        <div class="browser-prompt-diagram">
+          <div class="diagram-tabs">
+            <span class="diagram-tab active">Entire Screen</span>
+            <span class="diagram-tab">Window</span>
+            <span class="diagram-tab">Chrome Tab</span>
+          </div>
+          <div class="diagram-screen-preview">
+            <div class="diagram-monitor"></div>
+          </div>
+          <div class="diagram-checkbox-highlight">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            <strong>Also share system audio</strong>
+            <span class="arrow-indicator">&larr; CHECK THIS BOX</span>
+          </div>
+        </div>
+
+        <p class="step-p" style="font-size: 12px; color: var(--text-muted);">
+          Note: If you select the "Window" tab, Windows disables audio sharing. Always choose <strong>"Entire Screen"</strong> or a specific <strong>"Chrome Tab"</strong>.
+        </p>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-primary btn-large btn-full" id="btnNoticeRetry">
+          <span>Click to Share with Audio Checked</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Audio element for uploaded file playback -->
+  <audio id="audioElement" preload="auto" crossorigin="anonymous"></audio>
+
+  <!-- Application Scripts -->
+  <script src="audio-engine.js"></script>
+  <script src="visualizer.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
