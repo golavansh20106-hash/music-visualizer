@@ -16,6 +16,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const statusLabel = document.getElementById('statusLabel');
   const emptyStateOverlay = document.getElementById('emptyStateOverlay');
 
+  // Now-Playing Overlay
+  const nowPlayingOverlay = document.getElementById('nowPlayingOverlay');
+  const nowPlayingTitle = document.getElementById('nowPlayingTitle');
+  const nowPlayingArtist = document.getElementById('nowPlayingArtist');
+  const nowPlayingSource = document.getElementById('nowPlayingSource');
+  let nowPlayingHideTimer = null;
+
   // Source Buttons
   const btnCaptureLoopback = document.getElementById('btnCaptureLoopback');
   const btnUploadFile = document.getElementById('btnUploadFile');
@@ -94,6 +101,8 @@ document.addEventListener('DOMContentLoaded', () => {
       statusLabel.textContent = 'STANDBY';
       emptyStateOverlay.classList.remove('fade-out');
       playerHud.classList.add('hud-hidden');
+      // Clear now-playing when audio stops
+      nowPlayingOverlay.classList.remove('visible');
     }
 
     if (type === 'file' || type === 'synth') {
@@ -117,6 +126,47 @@ document.addEventListener('DOMContentLoaded', () => {
       audioNoticeModal.classList.add('open');
     } else {
       alert(friendlyMessage);
+    }
+  };
+
+  // ------------------------------------------------------------------------
+  // Now-Playing Track Display (Windows Media Session API via Python bridge)
+  // ------------------------------------------------------------------------
+  function showNowPlaying(title, artist, source) {
+    if (!title) {
+      // No track info — hide overlay
+      nowPlayingOverlay.classList.remove('visible');
+      return;
+    }
+
+    nowPlayingTitle.textContent = title;
+    nowPlayingArtist.textContent = artist || '';
+    nowPlayingSource.textContent = source || '';
+
+    // Cancel any pending hide timer
+    if (nowPlayingHideTimer) {
+      clearTimeout(nowPlayingHideTimer);
+      nowPlayingHideTimer = null;
+    }
+
+    // Briefly remove then re-add .visible to replay the entrance animation
+    nowPlayingOverlay.classList.remove('visible');
+    // rAF trick: force a reflow so the transition fires on re-add
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        nowPlayingOverlay.classList.add('visible');
+        // Auto-hide after 8 seconds — stays visible while music is playing
+        nowPlayingHideTimer = setTimeout(() => {
+          nowPlayingOverlay.classList.remove('visible');
+        }, 8000);
+      });
+    });
+  }
+
+  audioEngine.onNowPlayingUpdate = (title, artist, source) => {
+    // Only show when loopback mode is active (playing PC audio)
+    if (audioEngine.sourceType === 'loopback') {
+      showNowPlaying(title, artist, source);
     }
   };
 

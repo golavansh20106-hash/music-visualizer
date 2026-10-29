@@ -16,6 +16,15 @@
   <!-- Fullscreen Ambient Visualizer Canvas -->
   <canvas id="visualizerCanvas"></canvas>
 
+  <!-- Now-Playing Overlay (centered bottom, fades in/out on track change) -->
+  <div class="now-playing-overlay" id="nowPlayingOverlay" aria-live="polite">
+    <div class="now-playing-inner">
+      <span class="now-playing-source" id="nowPlayingSource"></span>
+      <span class="now-playing-title" id="nowPlayingTitle"></span>
+      <span class="now-playing-artist" id="nowPlayingArtist"></span>
+    </div>
+  </div>
+
   <!-- Top Editorial Header & Navigation (Auto-hiding HUD) -->
   <header class="hud-header" id="hudHeader">
     <div class="brand-group">

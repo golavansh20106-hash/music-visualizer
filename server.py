@@ -29,6 +29,21 @@ except ImportError:
     import soundcard as sc
     import websockets
 
+# --------------------------------------------------------------------------
+# Optional: Windows Media Session API (winsdk) for Now-Playing info
+# --------------------------------------------------------------------------
+_winsdk_available = False
+try:
+    import asyncio as _asyncio
+    from winsdk.windows.media.control import (
+        GlobalSystemMediaTransportControlsSessionManager as MediaManager,
+    )
+    _winsdk_available = True
+    print("[*] Windows Media Session API available — track names will be fetched.")
+except Exception:
+    print("[i] winsdk not installed. Track names unavailable.")
+    print("    To enable: pip install winsdk")
+
 HTTP_PORT = 3000
 WS_PORT = 3001
 DIRECTORY = os.path.dirname(os.path.abspath(__file__))
@@ -37,6 +52,9 @@ connected_clients = set()
 clients_lock = threading.Lock()
 running = True
 async_loop = None
+
+# Shared now-playing state (updated by the media poller thread)
+_now_playing = {"title": "", "artist": "", "source": ""}
 
 # --------------------------------------------------------------------------
 # HTTP Static File Server (Port 3000)
@@ -71,6 +89,66 @@ async def broadcast_bytes(data):
 
     coros = [c.send(data) for c in clients_copy]
     await asyncio.gather(*coros, return_exceptions=True)
+
+
+# --------------------------------------------------------------------------
+# Windows Media Session Now-Playing Poller (async, runs on the event loop)
+# --------------------------------------------------------------------------
+async def _fetch_now_playing_winsdk():
+    """Fetch current media info from Windows SMTC via winsdk."""
+    if not _winsdk_available:
+        return None
+    try:
+        sessions = await MediaManager.request_async()
+        session = sessions.get_current_session()
+        if not session:
+            return None
+        info = await session.try_get_media_properties_async()
+        if not info:
+            return None
+        title = info.title or ""
+        artist = info.artist or ""
+        # Try to identify the source app
+        app_id = session.source_app_user_model_id or ""
+        source = ""
+        app_id_lower = app_id.lower()
+        if "spotify" in app_id_lower:
+            source = "Spotify"
+        elif "youtube" in app_id_lower or "chrome" in app_id_lower or "msedge" in app_id_lower:
+            source = "Browser"
+        elif "media" in app_id_lower or "groove" in app_id_lower:
+            source = "Media Player"
+        elif "vlc" in app_id_lower:
+            source = "VLC"
+        else:
+            source = ""
+        return {"title": title, "artist": artist, "source": source}
+    except Exception:
+        return None
+
+
+async def now_playing_poller():
+    """Poll Windows Media Session every 1s. Broadcast changes over WebSocket."""
+    global _now_playing
+    prev = {"title": "", "artist": "", "source": ""}
+
+    while running:
+        await asyncio.sleep(1.0)
+
+        with clients_lock:
+            if not connected_clients:
+                continue
+
+        result = await _fetch_now_playing_winsdk()
+        if result is None:
+            # winsdk unavailable or no session — nothing to broadcast
+            continue
+
+        if result["title"] != prev["title"] or result["artist"] != prev["artist"]:
+            prev = result
+            _now_playing = result
+            msg = json.dumps({"type": "now_playing", **result})
+            await broadcast_bytes(msg)
 
 def audio_capture_worker(target_loop):
     global running
@@ -139,6 +217,10 @@ async def ws_handler(websocket):
         except Exception:
             pass
 
+        # Send current now-playing state if available
+        if _now_playing.get("title"):
+            await websocket.send(json.dumps({"type": "now_playing", **_now_playing}))
+
         await websocket.wait_closed()
     finally:
         with clients_lock:
@@ -154,6 +236,8 @@ async def start_ws_server():
 
     async with websockets.serve(ws_handler, '127.0.0.1', WS_PORT):
         print(f"[*] WebSocket Audio Bridge active: ws://127.0.0.1:{WS_PORT}")
+        # Start the now-playing poller as a concurrent task
+        asyncio.ensure_future(now_playing_poller())
         while running:
             await asyncio.sleep(1)
 

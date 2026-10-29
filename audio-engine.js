@@ -18,6 +18,12 @@ class AudioEngine {
     this.externalFreqData = null;
     this.deviceName = 'PC Audio Loopback';
 
+    // Now-playing info (from Windows Media Session API via server)
+    this.nowPlayingTitle = '';
+    this.nowPlayingArtist = '';
+    this.nowPlayingSource = '';
+    this.onNowPlayingUpdate = null; // callback(title, artist, source)
+
     // FFT analysis buffer
     this.fftSize = 2048;
     this.freqData = null;
@@ -73,6 +79,13 @@ class AudioEngine {
               this.deviceName = msg.name;
               if (this.sourceType === 'loopback' && this.onStateChange) {
                 this.onStateChange('loopback', this.deviceName);
+              }
+            } else if (msg.type === 'now_playing') {
+              this.nowPlayingTitle = msg.title || '';
+              this.nowPlayingArtist = msg.artist || '';
+              this.nowPlayingSource = msg.source || '';
+              if (this.onNowPlayingUpdate) {
+                this.onNowPlayingUpdate(this.nowPlayingTitle, this.nowPlayingArtist, this.nowPlayingSource);
               }
             }
           } catch (e) {}
